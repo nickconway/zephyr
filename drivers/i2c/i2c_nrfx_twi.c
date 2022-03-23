@@ -197,14 +197,12 @@ static int i2c_nrfx_twi_recover_bus(const struct device *dev)
 	return (err == NRFX_SUCCESS ? 0 : -EBUSY);
 }
 
-static const struct i2c_driver_api i2c_nrfx_twi_driver_api = {
-	.configure   = i2c_nrfx_twi_configure,
-	.transfer    = i2c_nrfx_twi_transfer,
-	.recover_bus = i2c_nrfx_twi_recover_bus,
-};
+static int initialized = false;
 
 static int init_twi(const struct device *dev)
 {
+	LOG_WRN("init_twi");
+
 	const struct i2c_nrfx_twi_config *config = dev->config;
 	struct i2c_nrfx_twi_data *dev_data = dev->data;
 	nrfx_err_t result = nrfx_twi_init(&config->twi, &config->config,
@@ -215,8 +213,38 @@ static int init_twi(const struct device *dev)
 		return -EBUSY;
 	}
 
+	initialized = true;
 	return 0;
 }
+
+
+static int i2c_nrfx_twi_update_ext_power(const struct device *dev, bool ext_power_enabled) {
+	LOG_WRN("I2C update_ext_power now");
+	if(ext_power_enabled) {
+		LOG_WRN("New state power on, re-init");
+		if (!initialized) {
+			nrfx_twi_uninit(&get_dev_config(dev)->twi);
+			init_twi(dev);
+			// if (get_dev_data(dev)->dev_config) {
+			// 	i2c_nrfx_twi_configure(
+			// 		dev,
+			// 		get_dev_data(dev)->dev_config);
+			// }
+		}
+	} else {
+		if (initialized) {
+			initialized = false;
+		}
+	}
+	return 0;
+}
+
+static const struct i2c_driver_api i2c_nrfx_twi_driver_api = {
+	.update_ext_power = i2c_nrfx_twi_update_ext_power,
+	.configure   = i2c_nrfx_twi_configure,
+	.transfer    = i2c_nrfx_twi_transfer,
+	.recover_bus = i2c_nrfx_twi_recover_bus,
+};
 
 #ifdef CONFIG_PM_DEVICE
 static int twi_nrfx_pm_action(const struct device *dev,
@@ -228,14 +256,19 @@ static int twi_nrfx_pm_action(const struct device *dev,
 
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
-		init_twi(dev);
-		if (data->dev_config) {
-			i2c_nrfx_twi_configure(dev, data->dev_config);
+		if (!initialized) {
+			init_twi(dev);
+			if (data->dev_config) {
+				i2c_nrfx_twi_configure(dev, data->dev_config);
+			}
 		}
 		break;
 
 	case PM_DEVICE_ACTION_SUSPEND:
-		nrfx_twi_uninit(&config->twi);
+		if (initialized) {
+			nrfx_twi_uninit(&config->twi);
+			initialized = false;
+		}
 		break;
 
 	default:
