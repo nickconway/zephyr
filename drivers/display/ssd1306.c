@@ -484,18 +484,15 @@ static int ssd1306_update_ext_power(const struct device *dev, bool ext_power_sta
 	}
 
 	// first update to I2C
-	if (dev->data != NULL) {
-		struct ssd1306_data *driver = dev->data;
-		if (driver->bus != NULL) {
-			if(i2c_update_ext_power(driver->bus, ext_power_status_new_value)) {
-				LOG_ERR("Failed i2c_update_ext_power!");
-				return -EIO;
-			}
-		} else {
-			LOG_ERR("I2C bus is NULL");
+	if (dev->config != NULL) {
+		struct ssd1306_config *config = dev->config;
+
+		if(i2c_update_ext_power(&config->bus, ext_power_status_new_value)) {
+			LOG_ERR("Failed i2c_update_ext_power!");
+			return -EIO;
 		}
 	} else {
-		LOG_ERR("display data is NULL");
+		LOG_ERR("display config is NULL");
 	}
 
 	if (ext_power_status != ext_power_status_new_value) {
