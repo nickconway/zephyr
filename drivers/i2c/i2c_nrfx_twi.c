@@ -223,7 +223,8 @@ static int i2c_nrfx_twi_update_ext_power(const struct device *dev, bool ext_powe
 	if(ext_power_enabled) {
 		LOG_WRN("New state power on, re-init");
 		if (!initialized) {
-			nrfx_twi_uninit(&get_dev_config(dev)->twi);
+			struct i2c_nrfx_twi_config *config = dev->config;
+			nrfx_twi_uninit(&config->twi);
 			init_twi(dev);
 			// if (get_dev_data(dev)->dev_config) {
 			// 	i2c_nrfx_twi_configure(
