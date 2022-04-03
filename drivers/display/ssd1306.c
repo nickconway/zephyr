@@ -478,19 +478,27 @@ static int ext_power_status = true;
 
 static int ssd1306_update_ext_power(const struct device *dev, bool ext_power_status_new_value) {
 
+	LOG_DBG("Inside update_ext_pwr");
+
 	// minimum sleep needed when waking up
 	if (ext_power_status_new_value == true) {
 		k_sleep(K_MSEC(30));
 	}
 
+	LOG_DBG("dev-config: %p", dev->config);
+
 	// first update to I2C
 	if (dev->config != NULL) {
 		struct ssd1306_config *config = dev->config;
+
+		LOG_DBG("Before i2c_update_ext_power");
 
 		if(i2c_update_ext_power(&config->bus, ext_power_status_new_value)) {
 			LOG_ERR("Failed i2c_update_ext_power!");
 			return -EIO;
 		}
+		LOG_DBG("After i2c_update_ext_power");
+
 	} else {
 		LOG_ERR("display config is NULL");
 	}
@@ -501,8 +509,10 @@ static int ssd1306_update_ext_power(const struct device *dev, bool ext_power_sta
 			// sleep after I2C reset
 			k_sleep(K_MSEC(30));
 
+			LOG_DBG("Before ssd1306_re_init");
 			// re-init oled, sends commands through i2c bus
 			ssd1306_re_init(dev);
+			LOG_DBG("After ssd1306_re_init");
 		} else {
 			// no-op for now
 		}

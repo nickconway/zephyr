@@ -224,8 +224,14 @@ static int i2c_nrfx_twi_update_ext_power(const struct device *dev, bool ext_powe
 		LOG_WRN("New state power on, re-init");
 		if (!initialized) {
 			struct i2c_nrfx_twi_config *config = dev->config;
+			LOG_DBG("Before nrfx_twi_uninit");
 			nrfx_twi_uninit(&config->twi);
+			LOG_DBG("After nrfx_twi_uninit");
+
+			LOG_DBG("Before init_twi");
 			init_twi(dev);
+			LOG_DBG("After init_twi");
+
 			// if (get_dev_data(dev)->dev_config) {
 			// 	i2c_nrfx_twi_configure(
 			// 		dev,
@@ -255,19 +261,33 @@ static int twi_nrfx_pm_action(const struct device *dev,
 	struct i2c_nrfx_twi_data *data = dev->data;
 	int ret = 0;
 
+	LOG_DBG("In twi_nrfx_pm_action");
+
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
+		LOG_DBG("In PM_DEVICE_ACTION_RESUME");
+
 		if (!initialized) {
+			LOG_DBG("Before init_twi");
 			init_twi(dev);
+			LOG_DBG("After init_twi");
+
 			if (data->dev_config) {
+				LOG_DBG("Before i2c_nrfx_twi_configure");
+
 				i2c_nrfx_twi_configure(dev, data->dev_config);
+				LOG_DBG("After i2c_nrfx_twi_configure");
+
 			}
 		}
 		break;
 
 	case PM_DEVICE_ACTION_SUSPEND:
+		LOG_DBG("In PM_DEVICE_ACTION_SUSPEND");
 		if (initialized) {
+			LOG_DBG("Before nrfx_twi_uninit");
 			nrfx_twi_uninit(&config->twi);
+			LOG_DBG("After nrfx_twi_uninit");
 			initialized = false;
 		}
 		break;
